@@ -1,19 +1,29 @@
-# 📝 To-Do List Application (Python)
+# ✨ Advanced To-Do List App (Python Tkinter)
 
-A simple **Command-Line To-Do List Application** built in Python.  
-This project helps users manage tasks by allowing them to **add, view, update, delete, and search tasks**.  
-All tasks are stored in a **JSON file**, so they remain saved even after the program closes.
+A **feature-rich GUI To-Do List application** built in Python using Tkinter.  
+Manage tasks efficiently with **priority, category, and deadlines**, all saved persistently in a JSON file.  
+This project combines **clean GUI design**, **sortable task tables**, and **easy task management**.  
 
 ---
 
 ## 🚀 Features
-- ➕ Add new tasks  
-- 👀 View all tasks (with **status**, **priority**, **category**, **deadline**)  
+
+- ✅ Add tasks with:
+  - Title
+  - Priority (High / Medium / Low)
+  - Category (Work / Study / Personal / General)
+  - Optional Deadline (YYYY-MM-DD)  
 - ✅ Mark tasks as completed  
 - ❌ Delete tasks  
-- 🔍 Search tasks by category  
-- 💾 Persistent storage in `tasks.json`  
+- 🔄 Sort tasks by **Priority** or **Deadline**  
+- 💾 Persistent storage using `tasks.json`  
+- 🖥 Modern GUI with:
+  - Treeview table
+  - Striped rows for readability
+  - Colored buttons
+  - Resizable window  
 
 ---
 
 ## 📂 Project Structure
+
