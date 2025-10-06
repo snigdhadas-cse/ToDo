@@ -1,0 +1,16 @@
+[
+    {
+        "title": "Waking up",
+        "done": false,
+        "priority": "Low",
+        "category": "Work",
+        "deadline": "2025-12-10"
+    },
+    {
+        "title": "Attend Meeting",
+        "priority": "High",
+        "category": "Personal",
+        "deadline": "2025-11-12",
+        "done": false
+    }
+]
