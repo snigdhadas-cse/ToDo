@@ -1,75 +1,111 @@
+import tkinter as tk
+from tkinter import messagebox
 import json
+import os
 
 # File to store tasks
 TASKS_FILE = "tasks.json"
 
-# Load tasks from file
+# Load tasks
 def load_tasks():
-    try:
+    if os.path.exists(TASKS_FILE):
         with open(TASKS_FILE, "r") as f:
             return json.load(f)
-    except FileNotFoundError:
-        return []
+    return []
 
-# Save tasks to file
+# Save tasks
 def save_tasks(tasks):
     with open(TASKS_FILE, "w") as f:
         json.dump(tasks, f, indent=4)
 
-# Display tasks
-def show_tasks(tasks):
-    if not tasks:
-        print("\nNo tasks yet!")
-    else:
-        print("\nYour To-Do List:")
-        for i, task in enumerate(tasks, 1):
-            status = "✅" if task["done"] else "❌"
-            print(f"{i}. {task['title']} - {status}")
+# Refresh task list in GUI
+def refresh_tasks():
+    listbox.delete(0, tk.END)
+    for i, task in enumerate(tasks, 1):
+        status = "✅" if task["done"] else "❌"
+        listbox.insert(tk.END, f"{i}. {task['title']} [{task['priority']}] - {task['category']} | {status}")
 
-# Main program
-def main():
-    tasks = load_tasks()
+# Add task
+def add_task():
+    title = entry_task.get()
+    priority = priority_var.get()
+    category = category_var.get()
 
-    while True:
-        print("\n--- TO-DO LIST ---")
-        print("1. Add Task")
-        print("2. View Tasks")
-        print("3. Mark Task as Done")
-        print("4. Delete Task")
-        print("5. Exit")
+    if title.strip() == "":
+        messagebox.showwarning("Warning", "Task cannot be empty!")
+        return
 
-        choice = input("Enter choice: ")
+    task = {"title": title, "done": False, "priority": priority, "category": category, "deadline": None}
+    tasks.append(task)
+    save_tasks(tasks)
+    refresh_tasks()
+    entry_task.delete(0, tk.END)
 
-        if choice == "1":
-            title = input("Enter task: ")
-            tasks.append({"title": title, "done": False})
-            save_tasks(tasks)
-            print("Task added!")
-        elif choice == "2":
-            show_tasks(tasks)
-        elif choice == "3":
-            show_tasks(tasks)
-            num = int(input("Enter task number to mark done: ")) - 1
-            if 0 <= num < len(tasks):
-                tasks[num]["done"] = True
-                save_tasks(tasks)
-                print("Task marked as done!")
-            else:
-                print("Invalid task number.")
-        elif choice == "4":
-            show_tasks(tasks)
-            num = int(input("Enter task number to delete: ")) - 1
-            if 0 <= num < len(tasks):
-                tasks.pop(num)
-                save_tasks(tasks)
-                print("Task deleted!")
-            else:
-                print("Invalid task number.")
-        elif choice == "5":
-            print("Goodbye!")
-            break
-        else:
-            print("Invalid choice! Try again.")
+# Mark as done
+def mark_done():
+    selected = listbox.curselection()
+    if not selected:
+        messagebox.showwarning("Warning", "Please select a task!")
+        return
+    index = selected[0]
+    tasks[index]["done"] = True
+    save_tasks(tasks)
+    refresh_tasks()
 
-if __name__ == "__main__":
-    main()
+# Delete task
+def delete_task():
+    selected = listbox.curselection()
+    if not selected:
+        messagebox.showwarning("Warning", "Please select a task!")
+        return
+    index = selected[0]
+    tasks.pop(index)
+    save_tasks(tasks)
+    refresh_tasks()
+
+# ---------- GUI SETUP ----------
+root = tk.Tk()
+root.title("To-Do List App")
+root.geometry("500x400")
+
+tasks = load_tasks()
+
+# Task entry
+frame_top = tk.Frame(root)
+frame_top.pack(pady=10)
+
+entry_task = tk.Entry(frame_top, width=30)
+entry_task.grid(row=0, column=0, padx=5)
+
+priority_var = tk.StringVar(value="Medium")
+priority_menu = tk.OptionMenu(frame_top, priority_var, "High", "Medium", "Low")
+priority_menu.grid(row=0, column=1, padx=5)
+
+category_var = tk.StringVar(value="General")
+category_menu = tk.OptionMenu(frame_top, category_var, "Work", "Study", "Personal", "General")
+category_menu.grid(row=0, column=2, padx=5)
+
+btn_add = tk.Button(frame_top, text="Add Task", command=add_task)
+btn_add.grid(row=0, column=3, padx=5)
+
+# Task list
+listbox = tk.Listbox(root, width=70, height=15)
+listbox.pack(pady=10)
+
+# Buttons
+frame_bottom = tk.Frame(root)
+frame_bottom.pack(pady=10)
+
+btn_done = tk.Button(frame_bottom, text="Mark Done", command=mark_done)
+btn_done.grid(row=0, column=0, padx=10)
+
+btn_delete = tk.Button(frame_bottom, text="Delete Task", command=delete_task)
+btn_delete.grid(row=0, column=1, padx=10)
+
+btn_exit = tk.Button(frame_bottom, text="Exit", command=root.quit)
+btn_exit.grid(row=0, column=2, padx=10)
+
+# Load existing tasks
+refresh_tasks()
+
+root.mainloop()
