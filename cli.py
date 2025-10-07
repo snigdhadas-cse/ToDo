@@ -1,159 +1,168 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
-import json
-import os
 from datetime import datetime
+import json, os, uuid
 
-# ---------- Data Handling ----------
-TASKS_FILE = "tasks.json"
+# ---------------- Data Handling ---------------- #
+
+TASK_FILE = "tasks.json"
 
 def load_tasks():
-    if os.path.exists(TASKS_FILE):
-        with open(TASKS_FILE, "r") as f:
-            return json.load(f)
+    if os.path.exists(TASK_FILE):
+        with open(TASK_FILE, "r") as f:
+            try:
+                data = json.load(f)
+                print("Loaded tasks:", data)
+                return data
+            except json.JSONDecodeError:
+                print("JSON decode error — resetting file.")
+                return []
     return []
 
-def save_tasks(tasks):
-    with open(TASKS_FILE, "w") as f:
+def save_tasks():
+    with open(TASK_FILE, "w") as f:
         json.dump(tasks, f, indent=4)
+    print("Tasks saved:", tasks)
 
-# ---------- Task Operations ----------
-def refresh_tasks(sort_by=None):
+tasks = load_tasks()
+
+# ---------------- GUI Setup ---------------- #
+
+root = tk.Tk()
+root.title("Enhanced Colorful To-Do List")
+root.geometry("850x600")
+root.config(bg="#f0f4f7")
+
+style = ttk.Style()
+style.theme_use("clam")
+style.configure("Treeview", background="#ffffff", fieldbackground="#ffffff", font=("Segoe UI", 10))
+style.configure("Treeview.Heading", font=("Segoe UI Semibold", 11), background="#2c3e50", foreground="white")
+
+# ---------------- Functions ---------------- #
+
+def refresh_tasks():
+    print("Refreshing tasks display...")
     for row in tree.get_children():
         tree.delete(row)
-
-    sorted_tasks = tasks.copy()
-    if sort_by == "Priority":
-        order = {"High": 1, "Medium": 2, "Low": 3}
-        sorted_tasks.sort(key=lambda x: order.get(x["priority"], 99))
-    elif sort_by == "Deadline":
-        sorted_tasks.sort(key=lambda x: x["deadline"] or "9999-12-31")
-
-    for i, task in enumerate(sorted_tasks, 1):
-        status = "✅" if task["done"] else "❌"
-        deadline = task["deadline"] if task["deadline"] else "No deadline"
-        tree.insert("", "end", values=(i, task["title"], task["priority"], task["category"], deadline, status))
+    for t in tasks:
+        tree.insert("", "end", values=(
+            t["id"],
+            t["title"],
+            t["priority"],
+            t["category"],
+            t["deadline"] if t["deadline"] else "—",
+            "✅" if t["done"] else "❌"
+        ))
+    print("Displayed tasks:", [t["title"] for t in tasks])
 
 def add_task():
     title = entry_task.get().strip()
-    priority = priority_var.get()
-    category = category_var.get()
+    priority = combo_priority.get()
+    category = combo_category.get()
     deadline = entry_deadline.get().strip()
 
     if not title:
-        messagebox.showwarning("Warning", "Task cannot be empty!")
+        messagebox.showwarning("Warning", "Task title cannot be empty!")
         return
 
-    # validate deadline
-    if deadline:
-        try:
-            datetime.strptime(deadline, "%Y-%m-%d")
-        except ValueError:
-            messagebox.showwarning("Warning", "Deadline format must be YYYY-MM-DD")
-            return
-    else:
-        deadline = None
-
-    tasks.append({"title": title, "priority": priority, "category": category, "deadline": deadline, "done": False})
-    save_tasks(tasks)
-    refresh_tasks(sort_var.get())
+    task = {
+        "id": str(uuid.uuid4())[:8],
+        "title": title,
+        "priority": priority,
+        "category": category,
+        "deadline": deadline if deadline else None,
+        "done": False
+    }
+    tasks.append(task)
+    save_tasks()
+    refresh_tasks()
     entry_task.delete(0, tk.END)
     entry_deadline.delete(0, tk.END)
+    print("Added new task:", task)
 
 def mark_done():
     selected = tree.selection()
     if not selected:
-        messagebox.showwarning("Warning", "Please select a task!")
+        messagebox.showinfo("Info", "Please select a task to mark as done.")
         return
-    index = int(tree.item(selected, "values")[0]) - 1
-    tasks[index]["done"] = True
-    save_tasks(tasks)
-    refresh_tasks(sort_var.get())
+    item = tree.item(selected[0])
+    task_id = item["values"][0]
+    for t in tasks:
+        if t["id"] == task_id:
+            t["done"] = True
+            break
+    save_tasks()
+    refresh_tasks()
+    print("Marked as done:", task_id)
 
 def delete_task():
     selected = tree.selection()
     if not selected:
-        messagebox.showwarning("Warning", "Please select a task!")
+        messagebox.showinfo("Info", "Please select a task to delete.")
         return
-    index = int(tree.item(selected, "values")[0]) - 1
-    tasks.pop(index)
-    save_tasks(tasks)
-    refresh_tasks(sort_var.get())
+    item = tree.item(selected[0])
+    task_id = item["values"][0]
+    global tasks
+    tasks = [t for t in tasks if t["id"] != task_id]
+    save_tasks()
+    refresh_tasks()
+    print("Deleted task:", task_id)
 
-# ---------- GUI Setup ----------
-root = tk.Tk()
-root.title("✨ Advanced To-Do List App")
-root.geometry("800x500")
-root.configure(bg="#f0f0f5")  # light background
-root.resizable(True, True)
+# ---------------- Layout ---------------- #
 
-tasks = load_tasks()
-
-# ----- Top Frame: Add Task -----
-frame_top = tk.Frame(root, bg="#f0f0f5", pady=10)
+frame_top = tk.Frame(root, bg="#3498db", pady=10)
 frame_top.pack(fill="x")
 
-# Task entry
-entry_task = tk.Entry(frame_top, width=25, font=("Helvetica", 12))
-entry_task.grid(row=0, column=0, padx=5)
+tk.Label(frame_top, text="📝 Enhanced To-Do List", bg="#3498db", fg="white",
+         font=("Segoe UI Semibold", 18)).pack()
 
-# Priority dropdown
-priority_var = tk.StringVar(value="Medium")
-priority_menu = ttk.Combobox(frame_top, textvariable=priority_var, values=["High","Medium","Low"], width=10)
-priority_menu.grid(row=0, column=1, padx=5)
+frame_input = tk.Frame(root, bg="#f0f4f7", pady=10)
+frame_input.pack(fill="x", padx=10)
 
-# Category dropdown
-category_var = tk.StringVar(value="General")
-category_menu = ttk.Combobox(frame_top, textvariable=category_var, values=["Work","Study","Personal","General"], width=12)
-category_menu.grid(row=0, column=2, padx=5)
+tk.Label(frame_input, text="Task:", bg="#f0f4f7", font=("Segoe UI", 11)).grid(row=0, column=0, padx=5, pady=5)
+entry_task = tk.Entry(frame_input, width=30, font=("Segoe UI", 11))
+entry_task.grid(row=0, column=1, padx=5, pady=5)
 
-# Deadline entry
-entry_deadline = tk.Entry(frame_top, width=12, font=("Helvetica", 12))
-entry_deadline.insert(0, "YYYY-MM-DD")
-entry_deadline.grid(row=0, column=3, padx=5)
+tk.Label(frame_input, text="Priority:", bg="#f0f4f7", font=("Segoe UI", 11)).grid(row=0, column=2, padx=5)
+combo_priority = ttk.Combobox(frame_input, values=["Low", "Medium", "High"], state="readonly", width=10)
+combo_priority.current(1)
+combo_priority.grid(row=0, column=3, padx=5)
 
-# Add button
-btn_add = tk.Button(frame_top, text="Add Task", command=add_task, bg="#4caf50", fg="white", font=("Helvetica", 10, "bold"))
-btn_add.grid(row=0, column=4, padx=5)
+tk.Label(frame_input, text="Category:", bg="#f0f4f7", font=("Segoe UI", 11)).grid(row=0, column=4, padx=5)
+combo_category = ttk.Combobox(frame_input, values=["Work", "Study", "Personal", "Other"], state="readonly", width=10)
+combo_category.current(0)
+combo_category.grid(row=0, column=5, padx=5)
 
-# Sort dropdown
-sort_var = tk.StringVar(value="None")
-sort_menu = ttk.Combobox(frame_top, textvariable=sort_var, values=["None","Priority","Deadline"], width=10)
-sort_menu.grid(row=0, column=5, padx=5)
-sort_menu.bind("<<ComboboxSelected>>", lambda e: refresh_tasks(sort_var.get()))
+tk.Label(frame_input, text="Deadline (YYYY-MM-DD):", bg="#f0f4f7", font=("Segoe UI", 11)).grid(row=1, column=0, padx=5)
+entry_deadline = tk.Entry(frame_input, width=20, font=("Segoe UI", 11))
+entry_deadline.grid(row=1, column=1, padx=5)
 
-# ----- Middle Frame: Task List -----
-frame_middle = tk.Frame(root)
-frame_middle.pack(fill="both", expand=True, padx=10, pady=10)
+btn_add = tk.Button(frame_input, text="Add Task", bg="#27ae60", fg="white",
+                    font=("Segoe UI Semibold", 11), relief="flat", command=add_task)
+btn_add.grid(row=1, column=3, padx=5, pady=5)
 
-columns = ("#", "Title", "Priority", "Category", "Deadline", "Status")
-tree = ttk.Treeview(frame_middle, columns=columns, show="headings")
+# Task table
+frame_table = tk.Frame(root, bg="#f0f4f7")
+frame_table.pack(fill="both", expand=True, padx=10, pady=10)
+
+columns = ("ID", "Title", "Priority", "Category", "Deadline", "Done")
+tree = ttk.Treeview(frame_table, columns=columns, show="headings")
 for col in columns:
     tree.heading(col, text=col)
-    tree.column(col, width=120, anchor="center")
+tree.column("Title", width=200)
 tree.pack(fill="both", expand=True)
+frame_table.pack_propagate(False)
 
-# Add striped rows style
-style = ttk.Style()
-style.configure("Treeview", rowheight=25, font=("Helvetica", 10))
-style.map("Treeview", background=[("selected", "#add8e6")])
-tree.tag_configure("oddrow", background="#f9f9f9")
-tree.tag_configure("evenrow", background="#e6e6e6")
+# Buttons
+frame_btns = tk.Frame(root, bg="#f0f4f7", pady=10)
+frame_btns.pack(fill="x")
 
-# ----- Bottom Frame: Buttons -----
-frame_bottom = tk.Frame(root, bg="#f0f0f5", pady=10)
-frame_bottom.pack(fill="x")
+tk.Button(frame_btns, text="Mark Done ✅", bg="#f39c12", fg="white", font=("Segoe UI Semibold", 11),
+          command=mark_done).pack(side="left", padx=20)
 
-btn_done = tk.Button(frame_bottom, text="Mark Done", command=mark_done, bg="#2196f3", fg="white", font=("Helvetica", 10, "bold"))
-btn_done.grid(row=0, column=0, padx=10)
+tk.Button(frame_btns, text="Delete 🗑️", bg="#e74c3c", fg="white", font=("Segoe UI Semibold", 11),
+          command=delete_task).pack(side="right", padx=20)
 
-btn_delete = tk.Button(frame_bottom, text="Delete Task", command=delete_task, bg="#f44336", fg="white", font=("Helvetica", 10, "bold"))
-btn_delete.grid(row=0, column=1, padx=10)
-
-btn_exit = tk.Button(frame_bottom, text="Exit", command=root.quit, bg="#555555", fg="white", font=("Helvetica", 10, "bold"))
-btn_exit.grid(row=0, column=2, padx=10)
-
-# ----- Initialize -----
 refresh_tasks()
 
 root.mainloop()
